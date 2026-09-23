@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f4efe8;
+  --color-surface: #ffffff;
+  --color-fg: #1c1917;
+  --color-muted: #6f675e;
+  --color-primary: #16382c;
+  --color-primary-fg: #f6f1ea;
+  --color-hq: #0e1f19;
+  --color-hq-fg: #f4efe8;
+  --color-hq-muted: #8aa197;
+  --color-hq-line: #23483c;
+  --color-hq-panel: #143328;
+  --color-line: #ece6de;
+  --color-ok: #127a4a;
+  --color-accent: #c45c6a;
+  --color-soft: #e8f0ea;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --radius-xl: 1.35rem;
+  --shadow-sm: 0 1px 2px rgb(22 56 44 / 0.06);
+  --ease-out-bloom: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    font-family: var(--font-display);
+  }
+  p {
+    text-wrap: pretty;
+  }
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+.rdp-root {
+  --rdp-accent-color: var(--color-primary);
+  --rdp-accent-background-color: var(--color-soft);
+  --rdp-day-height: 2.5rem;
+  --rdp-day-width: 2.5rem;
+  font-family: var(--font-sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
