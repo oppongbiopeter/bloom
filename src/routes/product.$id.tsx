@@ -17,7 +17,7 @@ function ProductPage() {
   const florist = florists.find((f) => f.slug === p?.florist_slug);
 
   useEffect(() => {
-    if (p) setQty(p.unit === "stem" ? 50 : 1);
+    if (p) setQty(p.pack_size || (p.unit === "stem" ? 50 : 1));
   }, [p]);
 
   if (!ready) {
@@ -40,7 +40,7 @@ function ProductPage() {
     );
   }
 
-  const step = p.unit === "stem" ? 10 : 1;
+  const step = p.pack_size || (p.unit === "stem" ? 10 : 1);
 
   return (
     <AppFrame>
@@ -57,7 +57,7 @@ function ProductPage() {
           </p>
           <p className="mt-4">{p.blurb}</p>
           <p className="mt-3 text-sm text-muted">
-            Lead time {p.lead_days} day{p.lead_days === 1 ? "" : "s"} · {p.grams_per_unit}g per {p.unit}
+            Lead time {p.lead_days} day{p.lead_days === 1 ? "" : "s"} · {p.grams_per_unit}g per {p.unit} · pack of {p.pack_size} · {p.stock} in stock
           </p>
           {florist && (
             <p className="mt-3 rounded-2xl bg-soft p-3 text-sm">
@@ -70,7 +70,7 @@ function ProductPage() {
           <div className="mt-4 flex items-center gap-2">
             <button
               className="size-11 rounded-full border border-line"
-              onClick={() => setQty(Math.max(1, qty - step))}
+              onClick={() => setQty(Math.max(step, qty - step))}
               aria-label="Decrease"
             >
               −

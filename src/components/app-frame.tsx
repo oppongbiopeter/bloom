@@ -23,6 +23,8 @@ export function AppFrame({
     path.startsWith("/onboarding") ||
     path.startsWith("/account") ||
     path.startsWith("/login") ||
+    path.startsWith("/enter") ||
+    path.startsWith("/partner") ||
     path.startsWith("/hq");
   const shouldGate = Boolean(user && profile && !profile.staff_role && !skip);
 

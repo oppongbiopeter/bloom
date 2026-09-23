@@ -30,7 +30,7 @@ function AuthSlot() {
   return user ? (
     <UserButton />
   ) : (
-    <Link to="/login" className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-fg">
+    <Link to="/enter" className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-fg">
       Sign in
     </Link>
   );

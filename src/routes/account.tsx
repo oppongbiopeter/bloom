@@ -52,6 +52,16 @@ function AccountPage() {
     <AppFrame authed>
       <h1 className="font-display text-4xl">Account</h1>
       <p className="mt-2 text-sm text-muted">{user?.primaryEmail}</p>
+      <nav className="mt-4 flex flex-wrap gap-2 text-sm">
+        <Link to="/shop" className="rounded-full bg-soft px-3 py-2 font-semibold text-primary">Shop</Link>
+        <Link to="/cart" className="rounded-full bg-soft px-3 py-2 font-semibold text-primary">Cart</Link>
+        <Link to="/calendar" className="rounded-full bg-soft px-3 py-2 font-semibold text-primary">Calendar</Link>
+        <Link to="/people" className="rounded-full bg-soft px-3 py-2 font-semibold text-primary">People</Link>
+        <Link to="/orders" className="rounded-full bg-soft px-3 py-2 font-semibold text-primary">Orders</Link>
+        {profile?.account_type === "florist" && (
+          <Link to="/partner" className="rounded-full bg-soft px-3 py-2 font-semibold text-primary">Studio</Link>
+        )}
+      </nav>
       <form
         className="mt-6 max-w-xl space-y-4"
         onSubmit={async (e) => {

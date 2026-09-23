@@ -10,13 +10,21 @@ import { useProfile } from "@/components/use-bloom";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/onboarding")({ component: Onboarding });
+type OnboardSearch = { as?: "florist" };
+
+export const Route = createFileRoute("/onboarding")({
+  validateSearch: (s: Record<string, unknown>): OnboardSearch => ({
+    as: s.as === "florist" ? "florist" : undefined,
+  }),
+  component: Onboarding,
+});
 
 function Onboarding() {
+  const { as } = Route.useSearch();
   const { user, isPending } = useCurrentUserState();
   const { profile } = useProfile();
   const nav = useNavigate();
-  const [type, setType] = useState<(typeof ACCOUNT_TYPES)[number]["id"]>("personal");
+  const [type, setType] = useState<(typeof ACCOUNT_TYPES)[number]["id"]>(as === "florist" ? "florist" : "personal");
   const [name, setName] = useState("");
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
@@ -60,7 +68,7 @@ function Onboarding() {
           ? `You're in ${placed.name}. Bloom is open there.`
           : `You're in ${placed.name}. That area is not open yet.`,
       );
-      nav({ to: "/shop" });
+      nav({ to: type === "florist" ? "/partner" : "/shop" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not place this phone");
     } finally {

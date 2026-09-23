@@ -206,23 +206,112 @@ export const setStaffRole = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+function mapCatalogueRow(p: Record<string, unknown>) {
+  return {
+    id: String(p.id),
+    name: String(p.name),
+    category: String(p.category),
+    color: String(p.color),
+    type: String(p.type),
+    price: num(p.price),
+    unit: String(p.unit),
+    grams_per_unit: num(p.grams_per_unit),
+    img: String(p.img),
+    blurb: String(p.blurb),
+    origin: String(p.origin),
+    florist_slug: p.florist_slug ? String(p.florist_slug) : null,
+    lead_days: num(p.lead_days),
+    sponsored: Boolean(p.sponsored),
+    sku: String(p.sku ?? ""),
+    status: String(p.status ?? "published"),
+    stock: num(p.stock),
+    pack_size: num(p.pack_size) || 1,
+    review_note: String(p.review_note ?? ""),
+  };
+}
+
+export const listHqCatalogue = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    await assertStaff(context.userId, ["superadmin", "pricing"]);
+    const sql = await getSql();
+    const rows = await sql<Record<string, unknown>>`select * from products order by status, name`;
+    return rows.map(mapCatalogueRow);
+  });
+
 export const updateProductPrice = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((d: unknown) =>
     z
       .object({
         id: z.string(),
-        price: z.number().positive(),
+        price: z.number().min(0),
         lead_days: z.number().int().min(0).max(30),
         sponsored: z.boolean(),
+        stock: z.number().int().min(0).max(100000),
+        pack_size: z.number().int().min(1).max(500),
       })
       .parse(d),
   )
   .handler(async ({ context, data }) => {
     await assertStaff(context.userId, ["superadmin", "pricing"]);
     const sql = await getSql();
-    await sql`update products set price = ${data.price}, lead_days = ${data.lead_days}, sponsored = ${data.sponsored} where id = ${data.id}`;
+    await sql`
+      update products set
+        price = ${data.price},
+        lead_days = ${data.lead_days},
+        sponsored = ${data.sponsored},
+        stock = ${data.stock},
+        pack_size = ${data.pack_size},
+        version = version + 1
+      where id = ${data.id}`;
+    await sql`insert into price_audits (actor_id, action, detail) values (${context.userId}, ${"edit"}, ${`${data.id} price ${data.price} stock ${data.stock} pack ${data.pack_size}`})`;
     return { ok: true };
+  });
+
+export const publishProduct = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: unknown) => z.object({ id: z.string() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertStaff(context.userId, ["superadmin"]);
+    const sql = await getSql();
+    const rows = await sql<Record<string, unknown>>`select * from products where id = ${data.id}`;
+    const p = rows[0];
+    if (!p) throw new Error("That variety is not in the catalogue");
+    if (num(p.price) <= 0) throw new Error("Set a price before publishing");
+    if (num(p.stock) < (num(p.pack_size) || 1)) throw new Error("Stock must cover at least one pack");
+    await sql`update products set status = ${"published"}, version = version + 1 where id = ${data.id}`;
+    await sql`insert into price_audits (actor_id, action, detail) values (${context.userId}, ${"publish"}, ${String(p.name)})`;
+    return { ok: true };
+  });
+
+export const previewPriceAdjust = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: unknown) => z.object({ percent: z.number().min(-50).max(50) }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertStaff(context.userId, ["superadmin", "pricing"]);
+    const sql = await getSql();
+    const rows = await sql<Record<string, unknown>>`select id, name, price from products where status = ${"published"} and price > 0 order by name`;
+    return rows.map((p) => {
+      const next = Math.round(num(p.price) * (1 + data.percent / 100) * 100) / 100;
+      return { id: String(p.id), name: String(p.name), price: num(p.price), next };
+    });
+  });
+
+export const applyPriceAdjust = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((d: unknown) => z.object({ percent: z.number().min(-50).max(50) }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertStaff(context.userId, ["superadmin"]);
+    const sql = await getSql();
+    const rows = await sql<Record<string, unknown>>`select id, price from products where status = ${"published"} and price > 0`;
+    for (const p of rows) {
+      const next = Math.round(num(p.price) * (1 + data.percent / 100) * 100) / 100;
+      if (next <= 0) continue;
+      await sql`update products set price = ${next}, version = version + 1 where id = ${String(p.id)} and status = ${"published"}`;
+    }
+    await sql`insert into price_audits (actor_id, action, detail) values (${context.userId}, ${"percent"}, ${`${data.percent}% on published prices`})`;
+    return { ok: true, count: rows.length };
   });
 
 export const updateFloristCommission = createServerFn({ method: "POST" })

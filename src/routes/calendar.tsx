@@ -139,6 +139,11 @@ function CalendarPage() {
     <AppFrame authed>
       <h1 className="font-display text-4xl">Occasion calendar</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted">{intro}</p>
+      <p className="mt-2 text-sm">
+        <Link to="/people" className="font-semibold text-primary">
+          People you send to
+        </Link>
+      </p>
 
       {due.length > 0 && (
         <div className="mt-4 space-y-2">

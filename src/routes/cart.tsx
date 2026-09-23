@@ -148,6 +148,7 @@ function CartPage() {
             packageType: g.packageType,
             addons: g.addons,
           })),
+          clientKey: crypto.randomUUID(),
         },
       });
       clear();

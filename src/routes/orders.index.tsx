@@ -30,7 +30,14 @@ function OrdersPage() {
             </p>
           </Link>
         ))}
-        {orders.length === 0 && <p className="text-muted">No orders yet.</p>}
+        {orders.length === 0 && (
+          <p className="text-muted">
+            No orders yet.{" "}
+            <Link to="/shop" className="font-semibold text-primary">
+              Browse the shop
+            </Link>
+          </p>
+        )}
       </div>
     </AppFrame>
   );

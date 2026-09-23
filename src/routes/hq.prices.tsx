@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCatalog } from "@/components/use-bloom";
-import { getHqSettings, saveHqSettings, updateFloristCommission, updateProductPrice } from "@/lib/server/hq";
+import {
+  applyPriceAdjust,
+  getHqSettings,
+  listHqCatalogue,
+  previewPriceAdjust,
+  publishProduct,
+  saveHqSettings,
+  updateFloristCommission,
+  updateProductPrice,
+} from "@/lib/server/hq";
+import type { Product } from "@/lib/server/actions";
 import type { HqSettings } from "@/lib/duty";
 import { ghs } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -9,23 +19,39 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/hq/prices")({ component: HqPrices });
 
 function HqPrices() {
-  const { products, florists, ready } = useCatalog();
+  const { florists } = useCatalog();
   const [settings, setSettings] = useState<HqSettings | null>(null);
-  const [draft, setDraft] = useState<Record<string, { price: string; lead: string; sponsored: boolean }>>({});
+  const [rows, setRows] = useState<Product[]>([]);
+  const [draft, setDraft] = useState<Record<string, { price: string; lead: string; sponsored: boolean; stock: string; pack: string }>>({});
+  const [percent, setPercent] = useState("5");
+  const [preview, setPreview] = useState<{ id: string; name: string; price: number; next: number }[]>([]);
+
+  function load() {
+    listHqCatalogue()
+      .then(setRows)
+      .catch(() => {});
+  }
 
   useEffect(() => {
     getHqSettings()
       .then(setSettings)
       .catch(() => {});
+    load();
   }, []);
 
   useEffect(() => {
     const next: typeof draft = {};
-    for (const p of products) {
-      next[p.id] = { price: String(p.price), lead: String(p.lead_days), sponsored: p.sponsored };
+    for (const p of rows) {
+      next[p.id] = {
+        price: String(p.price),
+        lead: String(p.lead_days),
+        sponsored: p.sponsored,
+        stock: String(p.stock),
+        pack: String(p.pack_size),
+      };
     }
     setDraft(next);
-  }, [products]);
+  }, [rows]);
 
   async function saveTariff(e: React.FormEvent) {
     e.preventDefault();
@@ -70,10 +96,49 @@ function HqPrices() {
           <button className="min-h-11 rounded-full bg-hq-fg font-semibold text-hq md:col-span-3">Save tariff</button>
         </form>
       )}
-      <h2 className="mt-10 text-xl">Catalog</h2>
-      {!ready && <p className="mt-2 text-sm text-hq-muted">Loading varieties…</p>}
+      <h2 className="mt-10 text-xl">Catalogue</h2>
+      <p className="mt-1 max-w-2xl text-sm text-hq-muted">
+        The source sheet and the live shop are one catalogue. Drafts stay off the shop until the super admin publishes a price, a pack size and stock.
+      </p>
+      <img src="/flowers/catalogue-source.jpg" alt="Source catalogue sheet" className="mt-4 max-h-56 w-full rounded-2xl object-cover object-top" />
+      <form
+        className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-hq-line bg-hq-panel p-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const pct = Number(percent);
+          const rowsPreview = await previewPriceAdjust({ data: { percent: pct } });
+          setPreview(rowsPreview);
+        }}
+      >
+        <label className="text-sm text-hq-muted">
+          Percent on published prices
+          <input className="mt-1 w-24 rounded-lg border border-hq-line bg-hq px-2 py-1 text-hq-fg" value={percent} onChange={(e) => setPercent(e.target.value)} />
+        </label>
+        <button className="min-h-10 rounded-full border border-hq-line px-4 text-sm font-semibold">Preview</button>
+        <button
+          type="button"
+          className="min-h-10 rounded-full bg-hq-fg px-4 text-sm font-semibold text-hq"
+          onClick={async () => {
+            await applyPriceAdjust({ data: { percent: Number(percent) } });
+            toast.success("Published prices updated");
+            setPreview([]);
+            load();
+          }}
+        >
+          Publish adjustment
+        </button>
+      </form>
+      {preview.length > 0 && (
+        <ul className="mt-2 space-y-1 text-sm text-hq-muted">
+          {preview.map((p) => (
+            <li key={p.id}>
+              {p.name}: {ghs(p.price)} → {ghs(p.next)}
+            </li>
+          ))}
+        </ul>
+      )}
       <ul className="mt-3 space-y-2">
-        {products.map((p) => {
+        {rows.map((p) => {
           const d = draft[p.id];
           if (!d) return null;
           return (
@@ -81,7 +146,10 @@ function HqPrices() {
               <img src={p.img} alt="" className="size-14 rounded-lg object-cover" />
               <div className="min-w-40 flex-1">
                 <div className="font-semibold">{p.name}</div>
-                <div className="text-xs text-hq-muted">{p.origin} · {p.unit}</div>
+                <div className="text-xs text-hq-muted">
+                  {p.sku} · {p.status === "published" ? "On the shop" : "Draft"} · {p.origin}
+                </div>
+                {p.review_note ? <p className="mt-1 text-xs text-hq-muted">{p.review_note}</p> : null}
               </div>
               <label className="text-xs text-hq-muted">
                 Price
@@ -89,6 +157,22 @@ function HqPrices() {
                   className="mt-1 w-24 rounded-lg border border-hq-line bg-hq px-2 py-1 text-sm text-hq-fg"
                   value={d.price}
                   onChange={(e) => setDraft({ ...draft, [p.id]: { ...d, price: e.target.value } })}
+                />
+              </label>
+              <label className="text-xs text-hq-muted">
+                Stock
+                <input
+                  className="mt-1 w-20 rounded-lg border border-hq-line bg-hq px-2 py-1 text-sm text-hq-fg"
+                  value={d.stock}
+                  onChange={(e) => setDraft({ ...draft, [p.id]: { ...d, stock: e.target.value } })}
+                />
+              </label>
+              <label className="text-xs text-hq-muted">
+                Pack
+                <input
+                  className="mt-1 w-16 rounded-lg border border-hq-line bg-hq px-2 py-1 text-sm text-hq-fg"
+                  value={d.pack}
+                  onChange={(e) => setDraft({ ...draft, [p.id]: { ...d, pack: e.target.value } })}
                 />
               </label>
               <label className="text-xs text-hq-muted">
@@ -108,16 +192,50 @@ function HqPrices() {
                 Featured
               </label>
               <button
-                className="rounded-full bg-hq-fg px-3 py-1.5 text-xs font-semibold text-hq"
+                className="rounded-full border border-hq-line px-3 py-1.5 text-xs font-semibold"
                 onClick={async () => {
                   await updateProductPrice({
-                    data: { id: p.id, price: Number(d.price), lead_days: Number(d.lead), sponsored: d.sponsored },
+                    data: {
+                      id: p.id,
+                      price: Number(d.price),
+                      lead_days: Number(d.lead),
+                      sponsored: d.sponsored,
+                      stock: Number(d.stock),
+                      pack_size: Number(d.pack),
+                    },
                   });
-                  toast.success(`${p.name} · ${ghs(d.price)}`);
+                  toast.success(`${p.name} saved`);
+                  load();
                 }}
               >
                 Save
               </button>
+              {p.status !== "published" && (
+                <button
+                  className="rounded-full bg-hq-fg px-3 py-1.5 text-xs font-semibold text-hq"
+                  onClick={async () => {
+                    try {
+                      await updateProductPrice({
+                        data: {
+                          id: p.id,
+                          price: Number(d.price),
+                          lead_days: Number(d.lead),
+                          sponsored: d.sponsored,
+                          stock: Number(d.stock),
+                          pack_size: Number(d.pack),
+                        },
+                      });
+                      await publishProduct({ data: { id: p.id } });
+                      toast.success(`${p.name} is on the shop`);
+                      load();
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Could not publish");
+                    }
+                  }}
+                >
+                  Publish
+                </button>
+              )}
             </li>
           );
         })}

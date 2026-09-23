@@ -52,10 +52,18 @@ export function SiteFooter() {
               <Link to="/orders">Track an order</Link>
             </li>
             <li>
-              <Link to="/onboarding">Choose a workspace</Link>
+              <Link to="/account">Account</Link>
             </li>
             <li>
-              <Link to="/login">Sign in</Link>
+              <Link to="/enter">Sign in</Link>
+            </li>
+            <li>
+              <Link to="/login" search={{ party: "florist" }}>
+                Florist studio
+              </Link>
+            </li>
+            <li>
+              <Link to="/hq">Bloom staff</Link>
             </li>
           </ul>
         </div>

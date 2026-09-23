@@ -14,7 +14,26 @@ function PartnerPage() {
   useEffect(() => {
     listMyOrders().then(setOrders).catch(() => {});
   }, []);
-  const shop = florists.find((f) => f.slug === profile?.florist_slug) ?? florists[0];
+  if (profile && profile.account_type !== "florist") {
+    return (
+      <AppFrame authed>
+        <h1 className="font-display text-4xl">Studio desk</h1>
+        <p className="mt-2 max-w-xl text-sm text-muted">
+          This screen is for partner florists. Your workspace is a customer account, so your orders, people and calendar are the screens that belong to you.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link to="/orders" className="inline-flex min-h-11 items-center rounded-full bg-primary px-5 font-semibold text-primary-fg">
+            Your orders
+          </Link>
+          <Link to="/shop" className="inline-flex min-h-11 items-center rounded-full border border-line px-5 font-semibold">
+            Back to the shop
+          </Link>
+        </div>
+      </AppFrame>
+    );
+  }
+
+  const shop = florists.find((f) => f.slug === profile?.florist_slug);
   const mine = products.filter((p) => p.florist_slug === shop?.slug);
   const incoming = orders.filter((o) => o.florist_slug === shop?.slug);
   const commission = incoming.reduce((s, o) => s + o.merchandise * ((shop?.commission_pct ?? 12) / 100), 0);

@@ -38,10 +38,10 @@ function FloristsPage() {
       </div>
       <p className="mt-8 text-sm text-muted">
         Run a studio?{" "}
-        <Link to="/onboarding" className="font-semibold text-primary">
-          Sign up as a partner florist
+        <Link to="/login" search={{ party: "florist" }} className="font-semibold text-primary">
+          Sign in as a partner florist
         </Link>{" "}
-        and open the Studio tab after you switch workspace.
+        and you land on your studio desk.
       </p>
     </AppFrame>
   );

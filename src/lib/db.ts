@@ -110,7 +110,7 @@ async function createPgliteSql(): Promise<Sql> {
   // One in-memory instance per process, shared across HMR module instances, so
   // data survives source edits (it resets on dev-server restart).
   // New SQL files under migrations/ are picked up on the next module eval.
-  // Phone placement columns live in 0005_place.sql.
+  // Catalogue drafts and stock live in 0006_catalogue.sql.
   globalRef.__pgliteInstance__ ??= (async () => {
     const { PGlite } = await import("@electric-sql/pglite");
     const pg = new PGlite({

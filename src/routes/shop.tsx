@@ -112,7 +112,7 @@ function ShopPage() {
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
         {!ready && [0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="aspect-square animate-pulse rounded-2xl bg-line" />)}
         {list.map((p) => (
-          <ProductCard key={p.id} p={p} onAdd={() => add(p.id, p.unit === "stem" ? 10 : 1)} />
+          <ProductCard key={p.id} p={p} onAdd={() => add(p.id, p.pack_size || 1)} />
         ))}
       </div>
       {ready && list.length === 0 && <p className="mt-8 text-sm text-muted">No varieties match that filter.</p>}

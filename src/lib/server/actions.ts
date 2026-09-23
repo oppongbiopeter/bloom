@@ -44,6 +44,11 @@ export type Product = {
   florist_slug: string | null;
   lead_days: number;
   sponsored: boolean;
+  sku: string;
+  status: string;
+  stock: number;
+  pack_size: number;
+  review_note: string;
 };
 
 function num(v: unknown) {
@@ -52,7 +57,7 @@ function num(v: unknown) {
 
 export const listCatalog = createServerFn({ method: "GET" }).handler(async () => {
   const sql = await getSql();
-  const products = await sql<Record<string, unknown>>`select * from products order by sponsored desc, name`;
+  const products = await sql<Record<string, unknown>>`select * from products where status = ${"published"} and price > 0 order by sponsored desc, name`;
   const florists = await sql<{
     slug: string;
     name: string;
@@ -78,6 +83,11 @@ export const listCatalog = createServerFn({ method: "GET" }).handler(async () =>
       florist_slug: p.florist_slug ? String(p.florist_slug) : null,
       lead_days: num(p.lead_days),
       sponsored: Boolean(p.sponsored),
+      sku: String(p.sku ?? ""),
+      status: String(p.status ?? "published"),
+      stock: num(p.stock),
+      pack_size: num(p.pack_size) || 1,
+      review_note: String(p.review_note ?? ""),
     })) as Product[],
     florists: florists.map((f) => ({
       ...f,
@@ -232,6 +242,7 @@ const giftInput = z.object({
 const orderInput = z.object({
   lines: z.array(z.object({ productId: z.string(), qty: z.number().positive() })),
   gifts: z.array(giftInput).min(1),
+  clientKey: z.string().min(8).max(80),
 });
 
 export const placeOrder = createServerFn({ method: "POST" })
@@ -240,6 +251,11 @@ export const placeOrder = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertCanOrder(context.userId);
     const sql = await getSql();
+    const prior = await sql<{ id: number; total: string; delivery_fee: string }>`
+      select id, total, delivery_fee from orders where user_id = ${context.userId} and client_key = ${data.clientKey}`;
+    if (prior[0]) {
+      return { id: prior[0].id, total: num(prior[0].total), delivery: num(prior[0].delivery_fee) };
+    }
     const products = await sql<Record<string, unknown>>`select * from products`;
     const byId = Object.fromEntries(products.map((p) => [String(p.id), p]));
     const stations = await sql<Station>`select id, name, city, lat, lng from stations`;
@@ -249,14 +265,29 @@ export const placeOrder = createServerFn({ method: "POST" })
     let grams = 0;
     const names: string[] = [];
     let floristSlug: string | null = null;
+    const taken: { id: string; qty: number }[] = [];
     for (const line of data.lines) {
       const p = byId[line.productId];
-      if (!p) continue;
+      if (!p) throw new Error("A flower in this cart is no longer in the catalogue");
+      if (String(p.status) !== "published" || num(p.price) <= 0) {
+        throw new Error(`${p.name} is still a draft. Bloom has not published it.`);
+      }
+      const pack = num(p.pack_size) || 1;
+      if (line.qty % pack !== 0) throw new Error(`${p.name} sells in packs of ${pack}`);
+      if (num(p.stock) < line.qty) throw new Error(`${p.name} does not have ${line.qty} in stock`);
       merchandise += num(p.price) * line.qty;
       if (String(p.unit) === "stem") stems += line.qty;
       grams += num(p.grams_per_unit) * line.qty;
       names.push(`${p.name} × ${line.qty}`);
       if (p.florist_slug) floristSlug = String(p.florist_slug);
+      taken.push({ id: line.productId, qty: line.qty });
+    }
+    for (const line of taken) {
+      const updated = await sql<{ id: string }>`
+        update products set stock = stock - ${line.qty}, version = version + 1
+        where id = ${line.id} and status = ${"published"} and stock >= ${line.qty}
+        returning id`;
+      if (!updated[0]) throw new Error("Stock changed while this order was submitted. Review the cart and try again.");
     }
     let delivery = 0;
     let addonsFee = 0;
@@ -278,8 +309,8 @@ export const placeOrder = createServerFn({ method: "POST" })
     const total = merchandise + delivery + addonsFee;
     const isBatch = data.gifts.length > 1;
     const inserted = await sql<{ id: number }>`
-      insert into orders (user_id, status, is_batch, florist_slug, product_summary, stems, grams, merchandise, delivery_fee, addons_fee, total)
-      values (${context.userId}, ${"PLACED"}, ${isBatch}, ${floristSlug}, ${names.join(" · ")}, ${stems}, ${grams}, ${merchandise}, ${delivery}, ${addonsFee}, ${total})
+      insert into orders (user_id, status, is_batch, florist_slug, product_summary, stems, grams, merchandise, delivery_fee, addons_fee, total, client_key)
+      values (${context.userId}, ${"PLACED"}, ${isBatch}, ${floristSlug}, ${names.join(" · ")}, ${stems}, ${grams}, ${merchandise}, ${delivery}, ${addonsFee}, ${total}, ${data.clientKey})
       returning id`;
     const orderId = inserted[0].id;
     for (const r of resolved) {

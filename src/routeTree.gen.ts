@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as EnterRouteImport } from './routes/enter'
 import { Route as FloristsRouteImport } from './routes/florists'
 import { Route as HqRouteImport } from './routes/hq'
 import { Route as LoginRouteImport } from './routes/login'
@@ -53,6 +54,11 @@ const CalendarRoute = CalendarRouteImport.update({
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnterRoute = EnterRouteImport.update({
+  id: '/enter',
+  path: '/enter',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FloristsRoute = FloristsRouteImport.update({
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/calendar': typeof CalendarRoute
   '/cart': typeof CartRoute
+  '/enter': typeof EnterRoute
   '/florists': typeof FloristsRoute
   '/hq': typeof HqRouteWithChildren
   '/login': typeof LoginRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/calendar': typeof CalendarRoute
   '/cart': typeof CartRoute
+  '/enter': typeof EnterRoute
   '/florists': typeof FloristsRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/calendar': typeof CalendarRoute
   '/cart': typeof CartRoute
+  '/enter': typeof EnterRoute
   '/florists': typeof FloristsRoute
   '/hq': typeof HqRouteWithChildren
   '/login': typeof LoginRoute
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/calendar'
     | '/cart'
+    | '/enter'
     | '/florists'
     | '/hq'
     | '/login'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/calendar'
     | '/cart'
+    | '/enter'
     | '/florists'
     | '/login'
     | '/onboarding'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/calendar'
     | '/cart'
+    | '/enter'
     | '/florists'
     | '/hq'
     | '/login'
@@ -328,6 +340,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   CalendarRoute: typeof CalendarRoute
   CartRoute: typeof CartRoute
+  EnterRoute: typeof EnterRoute
   FloristsRoute: typeof FloristsRoute
   HqRoute: typeof HqRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -369,6 +382,13 @@ declare module '@tanstack/react-router' {
       path: '/cart'
       fullPath: '/cart'
       preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enter': {
+      id: '/enter'
+      path: '/enter'
+      fullPath: '/enter'
+      preLoaderRoute: typeof EnterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/florists': {
@@ -563,6 +583,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   CalendarRoute: CalendarRoute,
   CartRoute: CartRoute,
+  EnterRoute: EnterRoute,
   FloristsRoute: FloristsRoute,
   HqRoute: HqRouteWithChildren,
   LoginRoute: LoginRoute,

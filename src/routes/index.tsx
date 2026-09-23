@@ -34,10 +34,10 @@ function Home() {
               Send flowers now
             </Link>
             <Link
-              to="/onboarding"
+              to="/enter"
               className="inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-5 font-semibold"
             >
-              Choose a workspace
+              Sign in
             </Link>
           </div>
           <p className="mt-4 text-xs text-muted">Same-day Accra florists until 2pm · Kenya stems 3-day air lead · not every constituency is open yet</p>

@@ -180,8 +180,8 @@ function StaffSignIn() {
           </button>
         </form>
         <p className="mt-6 text-center text-xs text-hq-muted">
-          <Link to="/" className="underline-offset-2 hover:underline">
-            Back to the shop
+          <Link to="/enter" className="underline-offset-2 hover:underline">
+            I am a customer or florist
           </Link>
         </p>
       </div>
